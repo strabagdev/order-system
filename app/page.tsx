@@ -1,65 +1,173 @@
-import Image from "next/image";
+import Link from "next/link";
+import { AppShell } from "@/components/app-shell";
+import { DashboardMetric } from "@/components/dashboard-metric";
+import { SectionCard } from "@/components/section-card";
+import { StatusBadge } from "@/components/status-badge";
+import {
+  orderReferenceLabels,
+  paymentMethodLabels,
+  paymentStatusLabels,
+  preparationStatusLabels,
+} from "@/lib/constants";
+import { formatCurrency, formatTime } from "@/lib/format";
+import { getDailySummary } from "@/lib/queries";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const summary = await getDailySummary();
+  const latestOrders = summary.orders.slice(0, 5);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <AppShell
+      title="Panel general"
+      description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
+    >
+      <div className="grid gap-6">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <DashboardMetric
+            label="Venta del día"
+            value={formatCurrency(summary.totalSales)}
+            detail="Suma de todos los pedidos creados hoy."
+          />
+          <DashboardMetric
+            label="Pedidos del día"
+            value={String(summary.orderCount)}
+            detail="Cantidad total registrada desde las 00:00."
+          />
+          <DashboardMetric
+            label="Pedidos pagados"
+            value={String(summary.paidCount)}
+            detail="Pedidos con estado de pago actualizado a pagado."
+          />
+          <DashboardMetric
+            label="Pendientes de pago"
+            value={String(summary.pendingCount)}
+            detail="Pedidos aún abiertos en caja."
+          />
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <SectionCard
+            title="Rutas del MVP"
+            description="Estructura inicial recomendada para construir por etapas sin sobrecomplejizar."
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  href: "/pedido",
+                  title: "Toma de pedido",
+                  text: "Catálogo visual, resumen actual, referencia por mesa o número y guardado.",
+                },
+                {
+                  href: "/preparacion",
+                  title: "Preparación",
+                  text: "Cola de pedidos con productos, hora y cambio de estado.",
+                },
+                {
+                  href: "/pago",
+                  title: "Pago",
+                  text: "Estado independiente de pago y registro de método.",
+                },
+                {
+                  href: "/resumen",
+                  title: "Resumen diario",
+                  text: "Indicadores del día y desglose por forma de pago.",
+                },
+                {
+                  href: "/admin/productos",
+                  title: "Admin productos",
+                  text: "Alta, edición y activación/desactivación de la carta.",
+                },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 transition hover:border-amber-300 hover:bg-amber-50"
+                >
+                  <p className="text-base font-semibold text-stone-900">{item.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-stone-600">{item.text}</p>
+                </Link>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Desarrollo por etapas"
+            description="Orden exacto sugerido para construir este MVP con foco en funcionamiento y despliegue simple."
           >
-            Documentation
-          </a>
+            <ol className="space-y-3 text-sm leading-6 text-stone-700">
+              <li>1. Configurar Prisma, PostgreSQL, utilidades base y datos semilla.</li>
+              <li>2. Construir admin de productos para cargar la carta.</li>
+              <li>3. Implementar la pantalla de toma de pedido con resumen y POST de órdenes.</li>
+              <li>4. Implementar cola de preparación con cambio de estado independiente.</li>
+              <li>5. Implementar cola de pago con método de pago y estado independiente.</li>
+              <li>6. Implementar resumen diario con indicadores y desglose por forma de pago.</li>
+              <li>7. Ajustar estilos, validaciones, documentación y despliegue en Railway.</li>
+            </ol>
+          </SectionCard>
         </div>
-      </main>
-    </div>
+
+        <SectionCard
+          title="Pedidos recientes"
+          description="Lectura rápida del estado operativo actual del local."
+        >
+          {latestOrders.length === 0 ? (
+            <p className="text-sm text-stone-600">
+              Aún no hay pedidos cargados hoy. Puedes empezar desde la toma de pedido o cargar productos primero.
+            </p>
+          ) : (
+            <div className="grid gap-4">
+              {latestOrders.map((order) => (
+                <article
+                  key={order.id}
+                  className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-base font-semibold text-stone-900">
+                        {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        {formatTime(order.createdAt)}
+                      </p>
+                      <p className="mt-3 text-sm text-stone-700">
+                        {order.items
+                          .map((item) => `${item.quantity} x ${item.productName}`)
+                          .join(", ")}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 lg:items-end">
+                      <p className="text-lg font-semibold text-amber-700">
+                        {formatCurrency(order.total)}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge
+                          tone={
+                            order.preparationStatus === "READY" ? "success" : "warning"
+                          }
+                        >
+                          {preparationStatusLabels[order.preparationStatus]}
+                        </StatusBadge>
+                        <StatusBadge
+                          tone={order.paymentStatus === "PAID" ? "success" : "warning"}
+                        >
+                          {paymentStatusLabels[order.paymentStatus]}
+                        </StatusBadge>
+                        {order.paymentMethod ? (
+                          <StatusBadge tone="neutral">
+                            {paymentMethodLabels[order.paymentMethod]}
+                          </StatusBadge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </div>
+    </AppShell>
   );
 }

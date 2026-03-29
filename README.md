@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Order System MVP
 
-## Getting Started
+MVP web para toma y gestión de pedidos de un local/restaurante, construido con Next.js App Router, TypeScript, Prisma y PostgreSQL, pensado para desplegarse en Railway.
 
-First, run the development server:
+## Alcance actual
+
+- Sin autenticación ni login.
+- Pedido identificado por `mesa` o `número`.
+- Estado de preparación y estado de pago independientes.
+- Productos administrables desde una vista simple.
+- Pantallas base:
+  - `/pedido`
+  - `/preparacion`
+  - `/pago`
+  - `/resumen`
+  - `/admin/productos`
+
+## Estructura MVP propuesta
+
+### Dominio inicial
+
+- `Product`: carta configurable.
+- `Order`: pedido con referencia, estados y total.
+- `OrderItem`: snapshot de productos y cantidades dentro de un pedido.
+
+### Rutas App Router
+
+- `/`
+  - Panel general del MVP.
+- `/pedido`
+  - Toma de pedidos desde catálogo visual.
+- `/preparacion`
+  - Cola de preparación.
+- `/pago`
+  - Cola y actualización de pago.
+- `/resumen`
+  - Resumen diario.
+- `/admin/productos`
+  - CRUD simple de productos.
+
+### APIs iniciales
+
+- `GET /api/products`
+- `POST /api/products`
+- `PATCH /api/products/[id]`
+- `GET /api/orders`
+- `POST /api/orders`
+- `PATCH /api/orders/[id]/preparation`
+- `PATCH /api/orders/[id]/payment`
+
+### Carpetas
+
+```text
+app/
+  api/
+  admin/productos/
+  pago/
+  pedido/
+  preparacion/
+  resumen/
+components/
+generated/
+lib/
+prisma/
+```
+
+## Orden exacto de desarrollo
+
+1. Configurar Prisma, PostgreSQL, variables de entorno y datos semilla.
+2. Implementar admin de productos para cargar la carta.
+3. Implementar toma de pedido con resumen visual y guardado.
+4. Implementar cola de preparación.
+5. Implementar cola de pago y método de pago.
+6. Implementar resumen diario.
+7. Ajustar validaciones, estilos y despliegue en Railway.
+
+## Configuración local
+
+1. Crea tu archivo `.env` a partir de `.env.example`.
+2. Instala dependencias:
+
+```bash
+npm install
+```
+
+3. Genera Prisma Client:
+
+```bash
+npm run prisma:generate
+```
+
+4. Crea la primera migración:
+
+```bash
+npm run prisma:migrate:dev -- --name init
+```
+
+5. Carga productos base:
+
+```bash
+npm run prisma:seed
+```
+
+6. Levanta la app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Railway
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Configura `DATABASE_URL` en Railway.
+- Ejecuta migraciones antes de usar la app en producción.
+- El proyecto ya está preparado para crecer después con autenticación, cocina/caja separadas y reportes más completos.

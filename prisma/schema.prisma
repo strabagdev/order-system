@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductCategory {
+  DRINK
+  MAIN
+  SIDE
+  DESSERT
+  OTHER
+}
+
+enum OrderReferenceType {
+  TABLE
+  NUMBER
+}
+
+enum PreparationStatus {
+  PENDING
+  READY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  DEBIT
+  CREDIT
+  OTHER
+}
+
+model Product {
+  id         String          @id @default(cuid())
+  name       String
+  price      Int
+  category   ProductCategory @default(OTHER)
+  icon       String
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  orderItems OrderItem[]
+
+  @@index([isActive, category])
+  @@index([name])
+}
+
+model Order {
+  id                String             @id @default(cuid())
+  referenceType     OrderReferenceType
+  referenceValue    String
+  preparationStatus PreparationStatus  @default(PENDING)
+  paymentStatus     PaymentStatus      @default(PENDING)
+  paymentMethod     PaymentMethod?
+  total             Int
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  items             OrderItem[]
+
+  @@index([createdAt])
+  @@index([preparationStatus, createdAt])
+  @@index([paymentStatus, createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
