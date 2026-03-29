@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { PaymentControls } from "@/components/order-status-actions";
 import { SectionCard } from "@/components/section-card";
+import { SetupNotice } from "@/components/setup-notice";
 import { StatusBadge } from "@/components/status-badge";
 import {
   orderReferenceLabels,
@@ -10,10 +11,22 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { getPaymentOrders } from "@/lib/queries";
+import { hasDatabaseUrl } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function PagoPage() {
+  if (!hasDatabaseUrl()) {
+    return (
+      <AppShell
+        title="Cola de pago"
+        description="Gestiona el cobro sin depender del estado de preparación del pedido."
+      >
+        <SetupNotice />
+      </AppShell>
+    );
+  }
+
   const orders = await getPaymentOrders();
 
   return (

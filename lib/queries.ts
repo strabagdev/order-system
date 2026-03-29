@@ -1,7 +1,11 @@
+import "server-only";
+
 import { startOfDay } from "@/lib/time";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 export async function getActiveProducts() {
+  const prisma = getPrisma();
+
   return prisma.product.findMany({
     where: { isActive: true },
     orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -9,12 +13,16 @@ export async function getActiveProducts() {
 }
 
 export async function getAllProducts() {
+  const prisma = getPrisma();
+
   return prisma.product.findMany({
     orderBy: [{ isActive: "desc" }, { category: "asc" }, { name: "asc" }],
   });
 }
 
 export async function getPreparationOrders() {
+  const prisma = getPrisma();
+
   return prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
@@ -22,6 +30,8 @@ export async function getPreparationOrders() {
 }
 
 export async function getPaymentOrders() {
+  const prisma = getPrisma();
+
   return prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
@@ -29,6 +39,7 @@ export async function getPaymentOrders() {
 }
 
 export async function getDailySummary() {
+  const prisma = getPrisma();
   const today = startOfDay();
 
   const orders = await prisma.order.findMany({

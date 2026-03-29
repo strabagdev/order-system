@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { DashboardMetric } from "@/components/dashboard-metric";
 import { SectionCard } from "@/components/section-card";
+import { SetupNotice } from "@/components/setup-notice";
 import { StatusBadge } from "@/components/status-badge";
 import {
   orderReferenceLabels,
@@ -10,10 +11,22 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { getDailySummary } from "@/lib/queries";
+import { hasDatabaseUrl } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResumenPage() {
+  if (!hasDatabaseUrl()) {
+    return (
+      <AppShell
+        title="Resumen diario"
+        description="Vista consolidada de pedidos, cobros y formas de pago del día."
+      >
+        <SetupNotice />
+      </AppShell>
+    );
+  }
+
   const summary = await getDailySummary();
 
   return (

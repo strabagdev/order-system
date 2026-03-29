@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { PreparationStatus } from "@/generated/prisma/enums";
-import { prisma } from "@/lib/prisma";
+import { getPrisma, hasDatabaseUrl } from "@/lib/prisma";
 
 type Context = {
   params: Promise<{ id: string }>;
 };
 
 export async function PATCH(request: Request, context: Context) {
+  if (!hasDatabaseUrl()) {
+    return NextResponse.json(
+      { error: "DATABASE_URL no está configurada." },
+      { status: 503 },
+    );
+  }
+
+  const prisma = getPrisma();
   const { id } = await context.params;
   const body = await request.json();
   const status = String(body.preparationStatus ?? "");

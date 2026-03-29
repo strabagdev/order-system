@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { OrderReferenceType } from "@/generated/prisma/enums";
-import { prisma } from "@/lib/prisma";
+import { getPrisma, hasDatabaseUrl } from "@/lib/prisma";
 
 export async function GET() {
+  if (!hasDatabaseUrl()) {
+    return NextResponse.json(
+      { error: "DATABASE_URL no está configurada." },
+      { status: 503 },
+    );
+  }
+
+  const prisma = getPrisma();
   const orders = await prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
@@ -13,6 +21,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!hasDatabaseUrl()) {
+    return NextResponse.json(
+      { error: "DATABASE_URL no está configurada." },
+      { status: 503 },
+    );
+  }
+
+  const prisma = getPrisma();
   const body = await request.json();
   const referenceType = String(body.referenceType ?? "TABLE");
   const referenceValue = String(body.referenceValue ?? "").trim();

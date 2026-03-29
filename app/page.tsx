@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DashboardMetric } from "@/components/dashboard-metric";
 import { SectionCard } from "@/components/section-card";
+import { SetupNotice } from "@/components/setup-notice";
 import { StatusBadge } from "@/components/status-badge";
 import {
   orderReferenceLabels,
@@ -11,10 +12,22 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { getDailySummary } from "@/lib/queries";
+import { hasDatabaseUrl } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  if (!hasDatabaseUrl()) {
+    return (
+      <AppShell
+        title="Panel general"
+        description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
+      >
+        <SetupNotice />
+      </AppShell>
+    );
+  }
+
   const summary = await getDailySummary();
   const latestOrders = summary.orders.slice(0, 5);
 
