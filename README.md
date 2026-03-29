@@ -110,5 +110,17 @@ npm run dev
 ## Railway
 
 - Configura `DATABASE_URL` en Railway.
-- Ejecuta migraciones antes de usar la app en producción.
+- Ejecuta migraciones antes de usar la app en producción:
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+- Si quieres datos iniciales, luego ejecuta:
+
+```bash
+npm run prisma:seed
+```
+
+- Si desarrollas fuera de Railway, no uses `postgres.railway.internal` en tu máquina local. Ese host solo funciona dentro de Railway.
 - El proyecto ya está preparado para crecer después con autenticación, cocina/caja separadas y reportes más completos.
