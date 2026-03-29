@@ -11,7 +11,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { getPaymentOrders } from "@/lib/queries";
-import { hasDatabaseUrl } from "@/lib/prisma";
+import { hasDatabaseUrl, usesRailwayInternalHost } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,27 @@ export default async function PagoPage() {
     );
   }
 
-  const orders = await getPaymentOrders();
+  let orders;
+
+  try {
+    orders = await getPaymentOrders();
+  } catch {
+    return (
+      <AppShell
+        title="Cola de pago"
+        description="Gestiona el cobro sin depender del estado de preparación del pedido."
+      >
+        <SetupNotice
+          title="No se pudo conectar a PostgreSQL"
+          description={
+            usesRailwayInternalHost()
+              ? "Tu `DATABASE_URL` usa `postgres.railway.internal`, que solo funciona dentro de Railway. Para desarrollo local usa una URL pública o una base local."
+              : "La base no respondió. Revisa host, puerto y credenciales de `DATABASE_URL`."
+          }
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell

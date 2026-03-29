@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { getDailySummary } from "@/lib/queries";
-import { hasDatabaseUrl } from "@/lib/prisma";
+import { hasDatabaseUrl, usesRailwayInternalHost } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,28 @@ export default async function HomePage() {
     );
   }
 
-  const summary = await getDailySummary();
+  let summary;
+
+  try {
+    summary = await getDailySummary();
+  } catch {
+    return (
+      <AppShell
+        title="Panel general"
+        description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
+      >
+        <SetupNotice
+          title="No se pudo conectar a PostgreSQL"
+          description={
+            usesRailwayInternalHost()
+              ? "Tu `DATABASE_URL` usa `postgres.railway.internal`, que solo es accesible desde Railway. Para correr localmente necesitas una URL pública o una base local."
+              : "La conexión a la base falló. Revisa `DATABASE_URL`, conectividad y credenciales."
+          }
+        />
+      </AppShell>
+    );
+  }
+
   const latestOrders = summary.orders.slice(0, 5);
 
   return (

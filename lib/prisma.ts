@@ -11,6 +11,10 @@ export function hasDatabaseUrl() {
   return Boolean(process.env.DATABASE_URL);
 }
 
+export function usesRailwayInternalHost() {
+  return process.env.DATABASE_URL?.includes("postgres.railway.internal") ?? false;
+}
+
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
