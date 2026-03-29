@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DashboardMetric } from "@/components/dashboard-metric";
 import { SectionCard } from "@/components/section-card";
-import { SetupNotice } from "@/components/setup-notice";
 import { StatusBadge } from "@/components/status-badge";
 import {
   orderReferenceLabels,
@@ -12,50 +11,27 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { getDailySummary } from "@/lib/queries";
-import { hasDatabaseUrl, usesRailwayInternalHost } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  if (!hasDatabaseUrl()) {
-    return (
-      <AppShell
-        title="Panel general"
-        description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
-      >
-        <SetupNotice />
-      </AppShell>
-    );
-  }
-
-  let summary;
-
-  try {
-    summary = await getDailySummary();
-  } catch {
-    return (
-      <AppShell
-        title="Panel general"
-        description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
-      >
-        <SetupNotice
-          title="No se pudo conectar a PostgreSQL"
-          description={
-            usesRailwayInternalHost()
-              ? "Tu `DATABASE_URL` usa `postgres.railway.internal`, que solo es accesible desde Railway. Para correr localmente necesitas una URL pública o una base local."
-              : "La conexión a la base falló. Revisa `DATABASE_URL`, conectividad y credenciales."
-          }
-        />
-      </AppShell>
-    );
-  }
-
+  const summary = await getDailySummary();
   const latestOrders = summary.orders.slice(0, 5);
+  const pendingPreparation = summary.orders.filter(
+    (order) => order.preparationStatus === "PENDING",
+  ).length;
+  const pendingPaymentTotal = summary.orders
+    .filter((order) => order.paymentStatus === "PENDING")
+    .reduce((sum, order) => sum + order.total, 0);
+  const readyForCheckout = summary.orders.filter(
+    (order) =>
+      order.preparationStatus === "READY" && order.paymentStatus === "PENDING",
+  ).length;
 
   return (
     <AppShell
       title="Panel general"
-      description="Base del MVP para toma, preparación, pago y resumen diario de pedidos."
+      description="Vista rápida del turno para saber qué tomar, qué preparar y qué cobrar primero."
     >
       <div className="grid gap-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -81,37 +57,42 @@ export default async function HomePage() {
           />
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <SectionCard
-            title="Rutas del MVP"
-            description="Estructura inicial recomendada para construir por etapas sin sobrecomplejizar."
+            title="Acciones del turno"
+            description="Accesos pensados para el trabajo diario del local."
           >
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 {
                   href: "/pedido",
                   title: "Toma de pedido",
-                  text: "Catálogo visual, resumen actual, referencia por mesa o número y guardado.",
+                  text: "Abrir un nuevo pedido desde la carta visual.",
+                  meta: `${summary.orderCount} pedidos hoy`,
                 },
                 {
                   href: "/preparacion",
                   title: "Preparación",
-                  text: "Cola de pedidos con productos, hora y cambio de estado.",
+                  text: "Revisar la cola pendiente y marcar pedidos listos.",
+                  meta: `${pendingPreparation} pendientes`,
                 },
                 {
                   href: "/pago",
                   title: "Pago",
-                  text: "Estado independiente de pago y registro de método.",
+                  text: "Cobrar pedidos y registrar forma de pago.",
+                  meta: `${summary.pendingCount} por cobrar`,
                 },
                 {
                   href: "/resumen",
                   title: "Resumen diario",
-                  text: "Indicadores del día y desglose por forma de pago.",
+                  text: "Ver cierre parcial, pagos y movimientos del día.",
+                  meta: formatCurrency(summary.totalSales),
                 },
                 {
                   href: "/admin/productos",
-                  title: "Admin productos",
-                  text: "Alta, edición y activación/desactivación de la carta.",
+                  title: "Productos",
+                  text: "Administrar la carta y mantener productos activos.",
+                  meta: "Catálogo",
                 },
               ].map((item) => (
                 <Link
@@ -121,24 +102,36 @@ export default async function HomePage() {
                 >
                   <p className="text-base font-semibold text-stone-900">{item.title}</p>
                   <p className="mt-1 text-sm leading-6 text-stone-600">{item.text}</p>
+                  <p className="mt-3 text-sm font-medium text-amber-700">{item.meta}</p>
                 </Link>
               ))}
             </div>
           </SectionCard>
 
           <SectionCard
-            title="Desarrollo por etapas"
-            description="Orden exacto sugerido para construir este MVP con foco en funcionamiento y despliegue simple."
+            title="Prioridades ahora"
+            description="Indicadores rápidos para decidir dónde poner atención."
           >
-            <ol className="space-y-3 text-sm leading-6 text-stone-700">
-              <li>1. Configurar Prisma, PostgreSQL, utilidades base y datos semilla.</li>
-              <li>2. Construir admin de productos para cargar la carta.</li>
-              <li>3. Implementar la pantalla de toma de pedido con resumen y POST de órdenes.</li>
-              <li>4. Implementar cola de preparación con cambio de estado independiente.</li>
-              <li>5. Implementar cola de pago con método de pago y estado independiente.</li>
-              <li>6. Implementar resumen diario con indicadores y desglose por forma de pago.</li>
-              <li>7. Ajustar estilos, validaciones, documentación y despliegue en Railway.</li>
-            </ol>
+            <div className="space-y-3 text-sm leading-6 text-stone-700">
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4">
+                <p className="font-semibold text-stone-900">Cocina en espera</p>
+                <p className="mt-1 text-stone-600">
+                  {pendingPreparation} pedidos siguen pendientes de preparación.
+                </p>
+              </div>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4">
+                <p className="font-semibold text-stone-900">Listos para cobrar</p>
+                <p className="mt-1 text-stone-600">
+                  {readyForCheckout} pedidos ya están listos pero siguen abiertos en pago.
+                </p>
+              </div>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4">
+                <p className="font-semibold text-stone-900">Monto pendiente</p>
+                <p className="mt-1 text-stone-600">
+                  Queda {formatCurrency(pendingPaymentTotal)} por cobrar en el turno.
+                </p>
+              </div>
+            </div>
           </SectionCard>
         </div>
 

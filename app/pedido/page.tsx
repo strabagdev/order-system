@@ -1,51 +1,62 @@
 import { AppShell } from "@/components/app-shell";
+import { DashboardMetric } from "@/components/dashboard-metric";
 import { OrderTakingClient } from "@/components/order-taking-client";
-import { SetupNotice } from "@/components/setup-notice";
+import { SectionCard } from "@/components/section-card";
+import { productCategoryLabels } from "@/lib/constants";
+import { formatCurrency } from "@/lib/format";
 import { getActiveProducts } from "@/lib/queries";
-import { hasDatabaseUrl, usesRailwayInternalHost } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function PedidoPage() {
-  if (!hasDatabaseUrl()) {
-    return (
-      <AppShell
-        title="Toma de pedido"
-        description="Selecciona productos desde la carta visual, asigna mesa o número y guarda el pedido."
-      >
-        <SetupNotice />
-      </AppShell>
-    );
-  }
-
-  let products;
-
-  try {
-    products = await getActiveProducts();
-  } catch {
-    return (
-      <AppShell
-        title="Toma de pedido"
-        description="Selecciona productos desde la carta visual, asigna mesa o número y guarda el pedido."
-      >
-        <SetupNotice
-          title="No se pudo conectar a PostgreSQL"
-          description={
-            usesRailwayInternalHost()
-              ? "Tu `DATABASE_URL` usa `postgres.railway.internal`, que solo funciona dentro de Railway. Para desarrollo local usa una URL pública o una base local."
-              : "La base no respondió. Revisa host, puerto y credenciales de `DATABASE_URL`."
-          }
-        />
-      </AppShell>
-    );
-  }
+  const products = await getActiveProducts();
+  const activeCategories = new Set(products.map((product) => product.category)).size;
+  const averagePrice =
+    products.length > 0
+      ? Math.round(products.reduce((sum, product) => sum + product.price, 0) / products.length)
+      : 0;
 
   return (
     <AppShell
       title="Toma de pedido"
-      description="Selecciona productos desde la carta visual, asigna mesa o número y guarda el pedido."
+      description="Pantalla pensada para meseros: catálogo claro, resumen visible y guardado rápido."
     >
-      <OrderTakingClient products={products} />
+      <div className="grid gap-6">
+        <section className="grid gap-4 md:grid-cols-3">
+          <DashboardMetric
+            label="Productos activos"
+            value={String(products.length)}
+            detail="Ítems disponibles para tomar pedidos."
+          />
+          <DashboardMetric
+            label="Categorías visibles"
+            value={String(activeCategories)}
+            detail="Grupos usados para ordenar la carta."
+          />
+          <DashboardMetric
+            label="Precio promedio"
+            value={formatCurrency(averagePrice)}
+            detail="Referencia rápida del catálogo actual."
+          />
+        </section>
+
+        <SectionCard
+          title="Carta operativa"
+          description="Toca productos para agregarlos al pedido y ajusta cantidades desde el resumen lateral."
+        >
+          <div className="mb-5 flex flex-wrap gap-2">
+            {Array.from(new Set(products.map((product) => product.category))).map((category) => (
+              <span
+                key={category}
+                className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700"
+              >
+                {productCategoryLabels[category]}
+              </span>
+            ))}
+          </div>
+          <OrderTakingClient products={products} />
+        </SectionCard>
+      </div>
     </AppShell>
   );
 }

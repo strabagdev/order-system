@@ -1,7 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { DashboardMetric } from "@/components/dashboard-metric";
 import { SectionCard } from "@/components/section-card";
-import { SetupNotice } from "@/components/setup-notice";
 import { StatusBadge } from "@/components/status-badge";
 import {
   orderReferenceLabels,
@@ -11,48 +10,22 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { getDailySummary } from "@/lib/queries";
-import { hasDatabaseUrl, usesRailwayInternalHost } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResumenPage() {
-  if (!hasDatabaseUrl()) {
-    return (
-      <AppShell
-        title="Resumen diario"
-        description="Vista consolidada de pedidos, cobros y formas de pago del día."
-      >
-        <SetupNotice />
-      </AppShell>
-    );
-  }
-
-  let summary;
-
-  try {
-    summary = await getDailySummary();
-  } catch {
-    return (
-      <AppShell
-        title="Resumen diario"
-        description="Vista consolidada de pedidos, cobros y formas de pago del día."
-      >
-        <SetupNotice
-          title="No se pudo conectar a PostgreSQL"
-          description={
-            usesRailwayInternalHost()
-              ? "Tu `DATABASE_URL` usa `postgres.railway.internal`, que solo funciona dentro de Railway. Para desarrollo local usa una URL pública o una base local."
-              : "La base no respondió. Revisa host, puerto y credenciales de `DATABASE_URL`."
-          }
-        />
-      </AppShell>
-    );
-  }
+  const summary = await getDailySummary();
+  const readyCount = summary.orders.filter(
+    (order) => order.preparationStatus === "READY",
+  ).length;
+  const paidSales = summary.orders
+    .filter((order) => order.paymentStatus === "PAID")
+    .reduce((sum, order) => sum + order.total, 0);
 
   return (
     <AppShell
       title="Resumen diario"
-      description="Vista consolidada de pedidos, cobros y formas de pago del día."
+      description="Cierre rápido del día con estado operacional, ventas y distribución de pagos."
     >
       <div className="grid gap-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -75,6 +48,28 @@ export default async function ResumenPage() {
             label="Cantidad pendientes"
             value={String(summary.pendingCount)}
             detail="Pedidos con pago pendiente."
+          />
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <DashboardMetric
+            label="Preparados"
+            value={String(readyCount)}
+            detail="Pedidos marcados como listos hoy."
+          />
+          <DashboardMetric
+            label="Ticket promedio"
+            value={
+              summary.orderCount > 0
+                ? formatCurrency(Math.round(summary.totalSales / summary.orderCount))
+                : formatCurrency(0)
+            }
+            detail="Promedio de venta por pedido."
+          />
+          <DashboardMetric
+            label="Monto cobrado"
+            value={formatCurrency(paidSales)}
+            detail="Total efectivamente pagado hasta ahora."
           />
         </section>
 
