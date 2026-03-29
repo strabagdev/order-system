@@ -4,7 +4,7 @@ import { PreparationToggle } from "@/components/order-status-actions";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  orderReferenceLabels,
+  formatOrderReference,
   preparationStatusLabels,
 } from "@/lib/constants";
 import { formatCurrency, formatTime } from "@/lib/format";
@@ -63,7 +63,10 @@ export default async function PreparacionPage() {
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-lg font-semibold text-stone-900">
-                            {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                            {formatOrderReference({
+                              referenceType: order.referenceType,
+                              referenceValue: order.referenceValue,
+                            })}
                           </p>
                           <StatusBadge tone="warning">
                             {preparationStatusLabels[order.preparationStatus]}
@@ -114,7 +117,10 @@ export default async function PreparacionPage() {
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-lg font-semibold text-stone-900">
-                            {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                            {formatOrderReference({
+                              referenceType: order.referenceType,
+                              referenceValue: order.referenceValue,
+                            })}
                           </p>
                           <StatusBadge tone="success">
                             {preparationStatusLabels[order.preparationStatus]}

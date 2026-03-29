@@ -11,6 +11,22 @@ export const orderReferenceLabels = {
   NUMBER: "Número",
 } as const;
 
+export function formatOrderReference({
+  referenceType,
+  referenceValue,
+}: {
+  referenceType: keyof typeof orderReferenceLabels;
+  referenceValue: string;
+}) {
+  const trimmedValue = referenceValue.trim();
+
+  if (!trimmedValue || trimmedValue === "Sin referencia") {
+    return "Sin referencia";
+  }
+
+  return `${orderReferenceLabels[referenceType]} ${trimmedValue}`;
+}
+
 export const preparationStatusLabels = {
   PENDING: "Pendiente",
   READY: "Listo",

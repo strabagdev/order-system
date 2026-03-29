@@ -4,7 +4,7 @@ import { DashboardMetric } from "@/components/dashboard-metric";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  orderReferenceLabels,
+  formatOrderReference,
   paymentMethodLabels,
   paymentStatusLabels,
   preparationStatusLabels,
@@ -153,7 +153,10 @@ export default async function HomePage() {
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <p className="text-base font-semibold text-stone-900">
-                        {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                        {formatOrderReference({
+                          referenceType: order.referenceType,
+                          referenceValue: order.referenceValue,
+                        })}
                       </p>
                       <p className="mt-1 text-sm text-stone-500">
                         {formatTime(order.createdAt)}

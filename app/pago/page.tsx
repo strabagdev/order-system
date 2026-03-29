@@ -4,7 +4,7 @@ import { PaymentControls } from "@/components/order-status-actions";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  orderReferenceLabels,
+  formatOrderReference,
   paymentMethodLabels,
   paymentStatusLabels,
   preparationStatusLabels,
@@ -62,7 +62,10 @@ export default async function PagoPage() {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <p className="text-lg font-semibold text-stone-900">
-                            {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                            {formatOrderReference({
+                              referenceType: order.referenceType,
+                              referenceValue: order.referenceValue,
+                            })}
                           </p>
                           <p className="mt-1 text-sm text-stone-500">
                             {formatTime(order.createdAt)}
@@ -123,7 +126,10 @@ export default async function PagoPage() {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <p className="text-lg font-semibold text-stone-900">
-                            {orderReferenceLabels[order.referenceType]} {order.referenceValue}
+                            {formatOrderReference({
+                              referenceType: order.referenceType,
+                              referenceValue: order.referenceValue,
+                            })}
                           </p>
                           <p className="mt-1 text-sm text-stone-500">
                             {formatTime(order.createdAt)}

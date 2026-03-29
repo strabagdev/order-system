@@ -31,17 +31,19 @@ export async function POST(request: Request) {
   const prisma = getPrisma();
   const body = await request.json();
   const referenceType = String(body.referenceType ?? "TABLE");
-  const referenceValue = String(body.referenceValue ?? "").trim();
+  const rawReferenceValue = String(body.referenceValue ?? "").trim();
   const items: Array<{ productId: string; quantity: number }> = Array.isArray(body.items)
     ? body.items
     : [];
 
-  if (!(referenceType in OrderReferenceType) || !referenceValue || items.length === 0) {
+  if (!(referenceType in OrderReferenceType) || items.length === 0) {
     return NextResponse.json(
-      { error: "Referencia e items son obligatorios." },
+      { error: "Debes agregar al menos un producto." },
       { status: 400 },
     );
   }
+
+  const referenceValue = rawReferenceValue || "Sin referencia";
 
   const productIds = items.map((item: { productId: string; quantity: number }) =>
     String(item.productId),

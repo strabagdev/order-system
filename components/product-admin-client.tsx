@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { productCategories, productCategoryLabels } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
+import { ToastState, UiToast } from "@/components/ui-toast";
 
 type Product = {
   id: string;
@@ -26,13 +27,13 @@ export function ProductAdminClient({ products }: { products: Product[] }) {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
-    setMessage(null);
+    setToast(null);
 
     const method = editingId ? "PATCH" : "POST";
     const url = editingId ? `/api/products/${editingId}` : "/api/products";
@@ -57,24 +58,44 @@ export function ProductAdminClient({ products }: { products: Product[] }) {
 
       setForm(emptyForm);
       setEditingId(null);
-      setMessage(editingId ? "Producto actualizado." : "Producto creado.");
+      setToast({
+        type: "success",
+        text: editingId ? "Producto actualizado." : "Producto creado.",
+      });
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Ocurrió un error.");
+      setToast({
+        type: "error",
+        text: error instanceof Error ? error.message : "Ocurrió un error.",
+      });
     } finally {
       setIsSaving(false);
     }
   }
 
   async function toggleProduct(product: Product) {
-    const response = await fetch(`/api/products/${product.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !product.isActive }),
-    });
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !product.isActive }),
+      });
 
-    if (response.ok) {
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error ?? "No fue posible actualizar el producto.");
+      }
+
+      setToast({
+        type: "success",
+        text: product.isActive ? "Producto desactivado." : "Producto activado.",
+      });
       router.refresh();
+    } catch (error) {
+      setToast({
+        type: "error",
+        text: error instanceof Error ? error.message : "Ocurrió un error.",
+      });
     }
   }
 
@@ -169,8 +190,6 @@ export function ProductAdminClient({ products }: { products: Product[] }) {
           </label>
         </div>
 
-        {message ? <p className="mt-4 text-sm text-stone-600">{message}</p> : null}
-
         <div className="mt-5 flex gap-3">
           <button
             type="submit"
@@ -236,6 +255,8 @@ export function ProductAdminClient({ products }: { products: Product[] }) {
           </article>
         ))}
       </div>
+
+      <UiToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
