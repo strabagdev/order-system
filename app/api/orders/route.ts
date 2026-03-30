@@ -28,71 +28,80 @@ export async function POST(request: Request) {
     );
   }
 
-  const prisma = getPrisma();
-  const body = await request.json();
-  const referenceType = String(body.referenceType ?? "TABLE");
-  const rawReferenceValue = String(body.referenceValue ?? "").trim();
-  const items: Array<{ productId: string; quantity: number }> = Array.isArray(body.items)
-    ? body.items
-    : [];
+  try {
+    const prisma = getPrisma();
+    const body = await request.json();
+    const referenceType = String(body.referenceType ?? "TABLE");
+    const rawReferenceValue = String(body.referenceValue ?? "").trim();
+    const items: Array<{ productId: string; quantity: number }> = Array.isArray(body.items)
+      ? body.items
+      : [];
 
-  if (!(referenceType in OrderReferenceType) || items.length === 0) {
-    return NextResponse.json(
-      { error: "Debes agregar al menos un producto." },
-      { status: 400 },
-    );
-  }
-
-  const referenceValue = rawReferenceValue || "Sin referencia";
-
-  const productIds = items.map((item: { productId: string; quantity: number }) =>
-    String(item.productId),
-  );
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, isActive: true },
-  });
-
-  const productMap = new Map(products.map((product) => [product.id, product]));
-
-  const orderItems = items.map((item: { productId: string; quantity: number }) => {
-    const product = productMap.get(String(item.productId));
-    const quantity = Number(item.quantity);
-
-    if (!product || Number.isNaN(quantity) || quantity <= 0) {
-      throw new Error("Item inválido.");
+    if (!(referenceType in OrderReferenceType) || items.length === 0) {
+      return NextResponse.json(
+        { error: "Debes agregar al menos un producto." },
+        { status: 400 },
+      );
     }
 
-    return {
-      productId: product.id,
-      productName: product.name,
-      unitPrice: product.price,
-      quantity,
-      lineTotal: product.price * quantity,
-    };
-  });
+    const referenceValue = rawReferenceValue || "Para llevar";
 
-  const total = orderItems.reduce(
-    (sum: number, item: { lineTotal: number }) => sum + item.lineTotal,
-    0,
-  );
+    const productIds = items.map((item: { productId: string; quantity: number }) =>
+      String(item.productId),
+    );
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, isActive: true },
+    });
 
-  const order = await prisma.order.create({
-    data: {
-      referenceType: OrderReferenceType[referenceType as keyof typeof OrderReferenceType],
-      referenceValue,
-      total,
-      items: {
-        create: orderItems,
+    const productMap = new Map(products.map((product) => [product.id, product]));
+
+    const orderItems = items.map((item: { productId: string; quantity: number }) => {
+      const product = productMap.get(String(item.productId));
+      const quantity = Number(item.quantity);
+
+      if (!product || Number.isNaN(quantity) || quantity <= 0) {
+        throw new Error("Item inválido.");
+      }
+
+      return {
+        productId: product.id,
+        productName: product.name,
+        unitPrice: product.price,
+        quantity,
+        lineTotal: product.price * quantity,
+      };
+    });
+
+    const total = orderItems.reduce(
+      (sum: number, item: { lineTotal: number }) => sum + item.lineTotal,
+      0,
+    );
+
+    const order = await prisma.order.create({
+      data: {
+        referenceType: OrderReferenceType[referenceType as keyof typeof OrderReferenceType],
+        referenceValue,
+        total,
+        items: {
+          create: orderItems,
+        },
       },
-    },
-    include: { items: true },
-  });
+      include: { items: true },
+    });
 
-  revalidatePath("/pedido");
-  revalidatePath("/preparacion");
-  revalidatePath("/pago");
-  revalidatePath("/resumen");
-  revalidatePath("/");
+    revalidatePath("/pedido");
+    revalidatePath("/preparacion");
+    revalidatePath("/pago");
+    revalidatePath("/resumen");
+    revalidatePath("/");
 
-  return NextResponse.json(order, { status: 201 });
+    return NextResponse.json(order, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "No fue posible guardar el pedido.",
+      },
+      { status: 500 },
+    );
+  }
 }

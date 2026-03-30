@@ -20,8 +20,12 @@ export function formatOrderReference({
 }) {
   const trimmedValue = referenceValue.trim();
 
-  if (!trimmedValue || trimmedValue === "Sin referencia") {
-    return "Sin referencia";
+  if (!trimmedValue || trimmedValue === "Sin referencia" || trimmedValue === "Para llevar") {
+    return "Para llevar";
+  }
+
+  if (/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(trimmedValue)) {
+    return trimmedValue;
   }
 
   return `${orderReferenceLabels[referenceType]} ${trimmedValue}`;

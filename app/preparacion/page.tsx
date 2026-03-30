@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { DashboardMetric } from "@/components/dashboard-metric";
-import { PreparationToggle } from "@/components/order-status-actions";
+import { PreparationActions } from "@/components/order-status-actions";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -88,7 +88,7 @@ export default async function PreparacionPage() {
                         <p className="text-lg font-semibold text-amber-700">
                           {formatCurrency(order.total)}
                         </p>
-                        <PreparationToggle
+                        <PreparationActions
                           orderId={order.id}
                           currentStatus={order.preparationStatus}
                         />
@@ -142,7 +142,7 @@ export default async function PreparacionPage() {
                         <p className="text-lg font-semibold text-amber-700">
                           {formatCurrency(order.total)}
                         </p>
-                        <PreparationToggle
+                        <PreparationActions
                           orderId={order.id}
                           currentStatus={order.preparationStatus}
                         />

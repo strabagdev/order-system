@@ -22,12 +22,26 @@ type CartItem = Product & {
   quantity: number;
 };
 
+async function readErrorMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as { error?: string };
+    return data.error ?? "No fue posible guardar el pedido.";
+  }
+
+  const text = await response.text();
+  return text || "No fue posible guardar el pedido.";
+}
+
 export function OrderTakingClient({ products }: { products: Product[] }) {
   const router = useRouter();
   const productsScrollRef = useRef<HTMLDivElement | null>(null);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [referenceType, setReferenceType] = useState<"TABLE" | "NUMBER">("TABLE");
   const [referenceValue, setReferenceValue] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -41,6 +55,8 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
 
   const items = Object.values(cart);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const selectedCartItem = selectedProduct ? cart[selectedProduct.id] ?? null : null;
+  const isEditingSelectedProduct = Boolean(selectedCartItem);
 
   function scrollProducts(direction: "left" | "right") {
     const container = productsScrollRef.current;
@@ -57,18 +73,11 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
     });
   }
 
-  function addProduct(product: Product) {
-    setCart((current) => {
-      const existing = current[product.id];
+  function openProductModal(product: Product) {
+    const existing = cart[product.id];
 
-      return {
-        ...current,
-        [product.id]: {
-          ...product,
-          quantity: existing ? existing.quantity + 1 : 1,
-        },
-      };
-    });
+    setSelectedProduct(product);
+    setSelectedQuantity(existing?.quantity ?? 1);
   }
 
   function updateQuantity(productId: string, nextQuantity: number) {
@@ -92,6 +101,36 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
         },
       };
     });
+  }
+
+  function closeProductModal() {
+    setSelectedProduct(null);
+    setSelectedQuantity(1);
+  }
+
+  function saveSelectedProduct() {
+    if (!selectedProduct) {
+      return;
+    }
+
+    setCart((current) => ({
+      ...current,
+      [selectedProduct.id]: {
+        ...selectedProduct,
+        quantity: selectedQuantity,
+      },
+    }));
+
+    closeProductModal();
+  }
+
+  function removeSelectedProduct() {
+    if (!selectedProduct) {
+      return;
+    }
+
+    updateQuantity(selectedProduct.id, 0);
+    closeProductModal();
   }
 
   function openConfirmModal() {
@@ -135,8 +174,7 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error ?? "No fue posible guardar el pedido.");
+        throw new Error(await readErrorMessage(response));
       }
 
       setCart({});
@@ -188,38 +226,20 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
                 >
                   <div className="flex min-w-max gap-2.5">
                     {items.map((item) => (
-                      <div
+                      <button
                         key={item.id}
-                        className="flex items-start gap-2.5 rounded-[1.35rem] border border-stone-800 bg-stone-900/80 px-3 py-2.5"
+                        type="button"
+                        onClick={() => openProductModal(item)}
+                        className="flex min-w-[112px] flex-col items-center rounded-[1.35rem] border border-stone-800 bg-stone-900/80 px-3 py-2.5 text-center transition hover:border-stone-600 hover:bg-stone-800/90"
                       >
-                        <span className="text-xl">{item.icon}</span>
-                        <div>
+                        <div className="flex items-center gap-1.5">
                           <p className="text-xs font-semibold text-stone-100">
                             {item.quantity} x
                           </p>
-                          <p className="text-xs text-stone-400">{item.name}</p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(item.id, item.quantity - 1)
-                              }
-                              className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs"
-                            >
-                              -
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(item.id, item.quantity + 1)
-                              }
-                              className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs"
-                            >
-                              +
-                            </button>
-                          </div>
+                          <span className="text-xl">{item.icon}</span>
                         </div>
-                      </div>
+                        <p className="mt-2 text-xs text-stone-400">{item.name}</p>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -268,7 +288,7 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
                 <button
                   key={product.id}
                   type="button"
-                  onClick={() => addProduct(product)}
+                  onClick={() => openProductModal(product)}
                   className="rounded-[1.5rem] border border-stone-200 bg-white p-4 text-left shadow-[0_16px_24px_rgba(120,86,45,0.06)] transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -281,7 +301,7 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
                     {product.name}
                   </h3>
                   <p className="mt-1 text-xs text-stone-500">
-                    Toca para agregar.
+                    Toca para elegir cantidad.
                   </p>
                   <p className="mt-3 text-lg font-semibold text-amber-700">
                     {formatCurrency(product.price)}
@@ -299,7 +319,7 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
                 Referencia opcional
               </p>
               <p className="mt-1 text-sm text-stone-600">
-                Úsala si necesitas asociar el pedido a una mesa o a un número.
+                Puedes usar mesa, número, nombre de la persona o dejarlo para llevar.
               </p>
             </div>
 
@@ -325,8 +345,10 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
                 <input
                   value={referenceValue}
                   onChange={(event) => setReferenceValue(event.target.value)}
-                  placeholder={referenceType === "TABLE" ? "Ej: 12" : "Ej: 101"}
-                  aria-label={referenceType === "TABLE" ? "Mesa" : "Número"}
+                  placeholder={
+                    referenceType === "TABLE" ? "Ej: 12 o Camila" : "Ej: 101 o Camila"
+                  }
+                  aria-label={referenceType === "TABLE" ? "Mesa o nombre" : "Número o nombre"}
                   className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-400"
                 />
               </label>
@@ -334,6 +356,100 @@ export function OrderTakingClient({ products }: { products: Product[] }) {
           </div>
         </section>
       </div>
+
+      {selectedProduct ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/55 px-4">
+          <div className="w-full max-w-md rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_24px_60px_rgba(28,25,23,0.22)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="text-3xl">{selectedProduct.icon}</span>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
+                    {isEditingSelectedProduct ? "Editar producto" : "Agregar producto"}
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-stone-900">
+                    {selectedProduct.name}
+                  </h2>
+                  <p className="mt-2 text-sm text-stone-600">
+                    {formatCurrency(selectedProduct.price)} c/u
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeProductModal}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-lg text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
+                aria-label="Cerrar selector de cantidad"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+              <p className="text-sm font-semibold text-stone-700">Cantidad</p>
+              <div className="mt-4 flex items-center justify-center">
+                <div className="min-w-24 rounded-[1.25rem] bg-white px-5 py-4 text-center shadow-sm">
+                  <p className="text-3xl font-semibold text-stone-950">{selectedQuantity}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuantity((current) => Math.max(1, current - 1))}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 text-xl font-semibold text-stone-700 transition hover:border-amber-400 hover:bg-white"
+                  aria-label="Disminuir cantidad"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuantity((current) => current + 1)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 text-xl font-semibold text-stone-700 transition hover:border-amber-400 hover:bg-white"
+                  aria-label="Aumentar cantidad"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-[1.25rem] bg-white px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  Subtotal
+                </p>
+                <p className="mt-1 text-2xl font-semibold text-amber-700">
+                  {formatCurrency(selectedProduct.price * selectedQuantity)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              {isEditingSelectedProduct ? (
+                <button
+                  type="button"
+                  onClick={removeSelectedProduct}
+                  className="rounded-full border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  Quitar
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={closeProductModal}
+                className="rounded-full border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveSelectedProduct}
+                className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+              >
+                {isEditingSelectedProduct ? "Actualizar" : "Agregar al pedido"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isConfirmOpen ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/55 px-4">
