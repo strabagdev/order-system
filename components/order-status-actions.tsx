@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { paymentMethods } from "@/lib/constants";
+import { paymentMethodLabels, paymentMethods } from "@/lib/constants";
 import { ToastState, UiToast } from "@/components/ui-toast";
 
 async function readActionError(response: Response) {
@@ -203,47 +203,80 @@ export function PaymentControls({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(currentMethod ?? "CASH");
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   async function updateStatus(nextStatus: "PENDING" | "PAID") {
     setLoading(true);
+    setToast(null);
 
-    await fetch(`/api/orders/${orderId}/payment`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentStatus: nextStatus,
-        paymentMethod: nextStatus === "PAID" ? paymentMethod : null,
-      }),
-    });
+    try {
+      const response = await fetch(`/api/orders/${orderId}/payment`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentStatus: nextStatus,
+          paymentMethod: nextStatus === "PAID" ? paymentMethod : null,
+        }),
+      });
 
-    router.refresh();
+      if (!response.ok) {
+        throw new Error(await readActionError(response));
+      }
+
+      setToast({
+        type: "success",
+        text:
+          nextStatus === "PAID"
+            ? "Pago registrado correctamente."
+            : "Pago devuelto a pendiente.",
+      });
+      router.refresh();
+    } catch (error) {
+      setToast({
+        type: "error",
+        text:
+          error instanceof Error ? error.message : "No fue posible actualizar el pago.",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <select
-        value={paymentMethod}
-        onChange={(event) => setPaymentMethod(event.target.value)}
-        className="rounded-full border border-stone-200 px-4 py-2 text-sm outline-none"
-      >
-        {paymentMethods.map((method) => (
-          <option key={method.value} value={method.value}>
-            {method.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={() => updateStatus(currentStatus === "PENDING" ? "PAID" : "PENDING")}
-        disabled={loading}
-        className="rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-60"
-      >
-        {loading
-          ? "Guardando..."
-          : currentStatus === "PENDING"
-            ? "Marcar pagado"
-            : "Volver a pendiente"}
-      </button>
-    </div>
+    <>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {currentStatus === "PENDING" ? (
+          <select
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value)}
+            className="rounded-full border border-stone-200 px-4 py-2 text-sm outline-none"
+          >
+            {paymentMethods.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        ) : currentMethod ? (
+          <div className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700">
+            {paymentMethodLabels[currentMethod as keyof typeof paymentMethodLabels]}
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => updateStatus(currentStatus === "PENDING" ? "PAID" : "PENDING")}
+          disabled={loading}
+          className="rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-60"
+        >
+          {loading
+            ? "Guardando..."
+            : currentStatus === "PENDING"
+              ? "Marcar pagado"
+              : "Volver a pendiente"}
+        </button>
+      </div>
+
+      <UiToast toast={toast} onClose={() => setToast(null)} />
+    </>
   );
 }
